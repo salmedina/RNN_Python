@@ -6,12 +6,17 @@ RNNArgs = namedtuple('RNNArgs', ['alpha', 'input_dim', 'hidden_dim','output_dim'
 
 # compute sigmoid non-linearity
 def sigmoid(x):
-    output = 1/(1+np.exp(-x))
-    return output
+    return 1/(1+np.exp(-x))
 
 # Easy derivation compute
 def sigmoid_to_derivative(output):
     return output * (1-output)
+
+def tanh_func(x):
+    return np.tanh(x)
+
+def tanh_to_derivative(output):
+    return 1-(output*output)
 
 
 def main(num_epochs, print_epochs, plot_sample, rnn_args):
@@ -32,6 +37,10 @@ def main(num_epochs, print_epochs, plot_sample, rnn_args):
     in_dim = rnn_args.input_dim
     hid_dim = rnn_args.hidden_dim
     out_dim = rnn_args.output_dim
+
+    # Functions as 1st class citizen in action!
+    activ_func = sigmoid
+    error_activ_func = sigmoid_to_derivative
 
     #initialize nn weights
     syn_0 = 2*np.random.random((in_dim, hid_dim)) - 1
@@ -76,14 +85,14 @@ def main(num_epochs, print_epochs, plot_sample, rnn_args):
 
             # hidden layer (input ~+ prev_hidden)
             # RNN happens here!
-            layer_1 = sigmoid(np.dot(X, syn_0) + np.dot(layer_1_values[-1], syn_h))
+            layer_1 = activ_func(np.dot(X, syn_0) + np.dot(layer_1_values[-1], syn_h))
 
             # output layer (new binary representation)
-            layer_2 = sigmoid(np.dot(layer_1, syn_1))
+            layer_2 = activ_func(np.dot(layer_1, syn_1))
 
             # Calculate the error, SGD
             layer_2_error = y - layer_2
-            layer_2_deltas.append((layer_2_error) * sigmoid_to_derivative(layer_2))
+            layer_2_deltas.append((layer_2_error) * error_activ_func(layer_2))
             overall_error += np.abs(layer_2_error[0])
 
             # decode estimate so we can print it out
@@ -103,7 +112,7 @@ def main(num_epochs, print_epochs, plot_sample, rnn_args):
             # Error at output layer
             layer_2_delta = layer_2_deltas[-position-1]
             # Error at hidden layer
-            layer_1_delta = (future_layer_1_delta.dot(syn_h.T)+layer_2_delta.dot(syn_1.T)) * sigmoid_to_derivative(layer_1)
+            layer_1_delta = (future_layer_1_delta.dot(syn_h.T)+layer_2_delta.dot(syn_1.T)) * error_activ_func(layer_1)
 
             #let's update all the weights for previous times
             syn_1_update += np.atleast_2d(layer_1).T.dot(layer_2_delta)
